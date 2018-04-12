@@ -22,5 +22,23 @@ echo “exec startlxde” > /home/sicario/.xinitrc
 pacman -S —noconfirm chromium
 
 #Wireless
-echo "ctrl_interface=/run/wpa_supplicant\nupdate_config=1" > /etc/wpa_supplicant/wpa_supplicant.conf
-for interface in `ip link | grep -Po "(?<=[0-9]{1}: )wl[^:]+(?=:)"`; do systemctl wpa_supplicant@$interface.service
+echo -e "ctrl_interface=/run/wpa_supplicant\nupdate_config=1" > /etc/wpa_supplicant/wpa_supplicant.conf
+echo > /etc/wpa_supplicant/wpa_supplicant.conf <<'EOT'
+"network={
+    ssid="MYSSID"
+    psk=[HEX PASSWORD] or "PASSWORD" 
+}"
+EOT
+for interface in `ip link | grep -Po "(?<=[0-9]{1}: )wl[^:]+(?=:)"`; do 
+  systemctl enable wpa_supplicant@$interface.service
+  wpa_supplicant -B -i $interface -c /etc/wpa_supplicant/wpa_supplicant.conf
+done
+
+#Then we can run wpa-cli. On the prompt run scan and then scan_results to see the APs.
+#Configuring SSID
+echo > /etc/wpa_supplicant/wpa_supplicant.conf <<'EOT'
+"network={
+    ssid="MYSSID"
+    psk=[HEX PASSWORD] or "PASSWORD" 
+}"
+ EOT
