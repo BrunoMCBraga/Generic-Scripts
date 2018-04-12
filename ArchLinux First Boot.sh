@@ -22,7 +22,6 @@ echo “exec startlxde” > /home/sicario/.xinitrc
 pacman -S —noconfirm chromium
 
 #Wireless
-echo -e "ctrl_interface=/run/wpa_supplicant\nupdate_config=1" > /etc/wpa_supplicant/wpa_supplicant.conf
 echo /etc/wpa_supplicant/wpa_supplicant.conf << EOT
 "ctrl_interface=/run/wpa_supplicant
 update_config=1
