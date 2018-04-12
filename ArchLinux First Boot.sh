@@ -14,7 +14,7 @@ echo “sicario:sicario” | chpasswd
 
 #Installing GUI
 sudo pacman -S —noconfirm xorg-server xorg-xinit
-pacman -S —noconfirm lxde ttf-dejavu # the latter 2 can be optional. XFCE default fonts suck at rendering text so you will need to install this package and then change the font on the preferences.
+pacman -S —noconfirm lxde xscreensaver ttf-dejavu # the latter 2 can be optional. XFCE default fonts suck at rendering text so you will need to install this package and then change the font on the preferences.
 echo “exec startlxde” > /root/.xinitrc
 echo “exec startlxde” > /home/sicario/.xinitrc
 
@@ -35,18 +35,18 @@ ctl.!default {
 }
 EOF
 
-#Wireless
-cat > /etc/wpa_supplicant/wpa_supplicant.conf << EOF 
-ctrl_interface=/run/wpa_supplicant
-update_config=1
-network={
-    ssid="MYSSID"
-    psk=[HEX PASSWORD] #or "PASSWORD" 
-}
-EOF
+#Wireless. We create a configuration for each interface. In this way, systemctl service for wpa_supplicant will launch each interface automatically.
 for interface in `ip link | grep -Po "(?<=[0-9]{1}: )wl[^:]+(?=:)"`; do 
+  cat > /etc/wpa_supplicant/wpa_supplicant-$interface.conf << EOF 
+    ctrl_interface=/run/wpa_supplicant
+    update_config=1
+    network={
+        ssid="MYSSID"
+        psk=[HEX PASSWORD] #or "PASSWORD" 
+  }
+  EOF
   systemctl enable wpa_supplicant@$interface.service
   wpa_supplicant -B -i $interface -c /etc/wpa_supplicant/wpa_supplicant.conf
 done
 
-#Then we can run wpa-cli. On the prompt run scan and then scan_results to see the APs.
+#Then we can run wpa_cli. On the prompt run scan and then scan_results to see the APs.
