@@ -23,15 +23,15 @@ arch-chroot /mnt
 #Timezone and stuff
 ln -sf /usr/share/zoneinfo/Portugal /etc/localtime
 hwclock --systohc
-sed -i -e “s/#pt_PT\.UTF-8 UTF-8/pt_PT\.UTF-8 UTF-8\g” /etc/locale.gen
+sed -i -e “s/#en_US\.UTF-8 UTF-8/en_US\.UTF-8 UTF-8\g” /etc/locale.gen
 locale-gen
-echo “LANG=pt_PT.UTF-8” > /etc/locale.conf
-echo “KEYMAP=pt-latin9“ > /etc/vconsole.conf
-echo “sicario” > /etc/hostname
-echo “127.0.0.1	localhost” >> /etc/hosts
-echo “::1 localhost >> /etc/hosts
-echo “127.0.1.1	sicario.norse.sec sicario” >> /etc/hosts
-echo “root:toor” | chpasswd
+echo "LANG=en_US.UTF-8" > /etc/locale.conf
+echo "KEYMAP=pt-latin9\nFONT=\nFONT_MAP=" > /etc/vconsole.conf
+echo "sicario” > /etc/hostname
+echo "127.0.0.1	localhost” >> /etc/hosts
+echo "::1 localhost >> /etc/hosts
+echo "127.0.1.1	sicario.norse.sec sicario” >> /etc/hosts
+echo "root:toor” | chpasswd
 
 # Installing Bootloader
 pacman -S —noconfirm grub efibootmgr
