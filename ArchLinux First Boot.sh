@@ -5,6 +5,7 @@ ip link | grep -Po “(?<=[0-9]{1}: )[^:]+(?=:)” | dhcpcd
 pacman -S —noconfirm sudo
 useradd -m -s lbin/bash sicario
 usermod -a -G wheel sicario
+echo "sicario   ALL=(ALL) ALL" >> /etc/sudoers
 echo “sicario:sicario” | chpasswd
 
 #Installing GUI
