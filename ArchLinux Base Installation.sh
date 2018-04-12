@@ -26,7 +26,7 @@ hwclock --systohc
 sed -i -e “s/#en_US\.UTF-8 UTF-8/en_US\.UTF-8 UTF-8\g” /etc/locale.gen
 locale-gen
 echo "LANG=en_US.UTF-8" > /etc/locale.conf
-echo "KEYMAP=pt-latin9\nFONT=\nFONT_MAP=" > /etc/vconsole.conf
+echo -e "KEYMAP=pt-latin9\nFONT=\nFONT_MAP=" > /etc/vconsole.conf
 echo "sicario” > /etc/hostname
 echo "127.0.0.1	localhost” >> /etc/hosts
 echo "::1 localhost >> /etc/hosts
