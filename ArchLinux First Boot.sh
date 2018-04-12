@@ -22,16 +22,16 @@ echo “exec startlxde” > /home/sicario/.xinitrc
 pacman -S —noconfirm chromium
 pacman -S alsa-utils #Configure sound
 
-#Configuring sound
+#Configuring sound. Use  aplay -l to check the card id. In my case, it is zero.
 cat > /etc/asound.conf << EOF
 pcm.!default {
     type hw
-    card 0
+    card 1
 }
 
 ctl.!default {
     type hw           
-    card 0
+    card 1
 }
 EOF
 
