@@ -22,8 +22,7 @@ echo “exec startlxde” > /home/sicario/.xinitrc
 pacman -S —noconfirm chromium
 
 #Wireless
-echo 
-"ctrl_interface=/run/wpa_supplicant
+echo "ctrl_interface=/run/wpa_supplicant
 update_config=1
 network={
     ssid="MYSSID"
