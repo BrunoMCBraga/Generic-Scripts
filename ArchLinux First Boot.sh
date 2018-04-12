@@ -20,6 +20,20 @@ echo “exec startlxde” > /home/sicario/.xinitrc
 
 #Installing some apps
 pacman -S —noconfirm chromium
+pacman -S alsa-utils #Configure sound
+
+#Configuring sound
+cat > /etc/asound.conf << EOF
+pcm.!default {
+    type hw
+    card 0
+}
+
+ctl.!default {
+    type hw           
+    card 0
+}
+EOF
 
 #Wireless
 cat > /etc/wpa_supplicant/wpa_supplicant.conf << EOF 
