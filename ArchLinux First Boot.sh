@@ -1,5 +1,5 @@
 #Getting network
-ip link | grep -Po “(?<=[0-9]{1}: )[^:]+(?=:)” | dhcpcd #get network
+ip link | grep -Po “(?<=[0-9]{1}: )[^:]+(?=:)” | dhcpcd 
 
 #Adding new user to sudoers
 pacman -S —noconfirm sudo
