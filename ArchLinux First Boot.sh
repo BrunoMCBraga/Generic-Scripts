@@ -22,7 +22,7 @@ echo “exec startlxde” > /home/sicario/.xinitrc
 pacman -S —noconfirm chromium
 
 #Wireless
-cat >> /etc/wpa_supplicant/wpa_supplicant.conf << EOF 
+cat > /etc/wpa_supplicant/wpa_supplicant.conf << EOF 
 ctrl_interface=/run/wpa_supplicant
 update_config=1
 network={
