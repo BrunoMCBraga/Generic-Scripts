@@ -26,8 +26,8 @@ cat >> /etc/wpa_supplicant/wpa_supplicant.conf << EOF
 "ctrl_interface=/run/wpa_supplicant
 update_config=1
 network={
-    ssid="MYSSID"
-    psk=[HEX PASSWORD] or "PASSWORD" 
+    ssid=\"MYSSID\"
+    psk=[HEX PASSWORD] or \"PASSWORD\" 
 }"
 EOF
 for interface in `ip link | grep -Po "(?<=[0-9]{1}: )wl[^:]+(?=:)"`; do 
