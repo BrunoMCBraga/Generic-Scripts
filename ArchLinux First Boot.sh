@@ -22,12 +22,14 @@ echo “exec startlxde” > /home/sicario/.xinitrc
 pacman -S —noconfirm chromium
 
 #Wireless
-echo "ctrl_interface=/run/wpa_supplicant
+cat >> /etc/wpa_supplicant/wpa_supplicant.conf << EOF 
+"ctrl_interface=/run/wpa_supplicant
 update_config=1
 network={
     ssid="MYSSID"
     psk=[HEX PASSWORD] or "PASSWORD" 
 }"
+EOF
 for interface in `ip link | grep -Po "(?<=[0-9]{1}: )wl[^:]+(?=:)"`; do 
   systemctl enable wpa_supplicant@$interface.service
   wpa_supplicant -B -i $interface -c /etc/wpa_supplicant/wpa_supplicant.conf
