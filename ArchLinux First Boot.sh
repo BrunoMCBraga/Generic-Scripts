@@ -1,3 +1,7 @@
+#Account variables
+USERNAME="sicario"
+PASSWORD="sicario"
+
 #Getting network
 systemctl enable dhcpcd@eth0.service
 ip link | grep -Po "(?<=[0-9]{1}: )[^:]+(?=:)" | dhcpcd #just dhcpcd also works
@@ -9,14 +13,14 @@ pacman -S --noconfirm wpa_supplicant #may not be necessary
 pacman -S —noconfirm sudo
 useradd -m -s lbin/bash sicario
 usermod -a -G wheel sicario
-echo "sicario ALL=(ALL) ALL" >> /etc/sudoers
-echo “sicario:sicario” | chpasswd
+echo "$USERNAME ALL=(ALL) ALL" >> /etc/sudoers
+echo "$USERNAME:$PASSWORD" | chpasswd
 
 #Installing GUI
 sudo pacman -S —noconfirm xorg-server xorg-xinit
 pacman -S —noconfirm lxde xscreensaver ttf-dejavu # the latter 2 can be optional. XFCE default fonts suck at rendering text so you will need to install this package and then change the font on the preferences.
-echo “exec startlxde” > /root/.xinitrc
-echo “exec startlxde” > /home/sicario/.xinitrc
+echo "exec startlxde" > /root/.xinitrc
+echo "exec startlxde" > /home/sicario/.xinitrc
 
 #Installing some apps
 pacman -S —noconfirm chromium
@@ -49,4 +53,3 @@ for interface in `ip link | grep -Po "(?<=[0-9]{1}: )wl[^:]+(?=:)"`; do
   wpa_supplicant -B -i $interface -c /etc/wpa_supplicant/wpa_supplicant.conf
 done
 
-#Then we can run wpa_cli. On the prompt run scan and then scan_results to see the APs.
