@@ -58,3 +58,4 @@ mkdir /boot/efi
 mount "$EFI_PARTITION" /boot/efi
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=arch_grub
 grub-mkconfig -o /boot/grub/grub.cfg
+reboot
