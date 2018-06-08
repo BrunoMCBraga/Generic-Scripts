@@ -11,8 +11,8 @@ pacman -S --noconfirm wpa_supplicant #may not be necessary
 
 #Adding new user to sudoers
 pacman -S —noconfirm sudo
-useradd -m -s lbin/bash sicario
-usermod -a -G wheel sicario
+useradd -m -s lbin/bash "$USERNAME"
+usermod -a -G wheel "$USERNAME"
 echo "$USERNAME ALL=(ALL) ALL" >> /etc/sudoers
 echo "$USERNAME:$PASSWORD" | chpasswd
 
@@ -20,7 +20,7 @@ echo "$USERNAME:$PASSWORD" | chpasswd
 sudo pacman -S —noconfirm xorg-server xorg-xinit
 pacman -S —noconfirm lxde xscreensaver ttf-dejavu # the latter 2 can be optional. XFCE default fonts suck at rendering text so you will need to install this package and then change the font on the preferences.
 echo "exec startlxde" > /root/.xinitrc
-echo "exec startlxde" > /home/sicario/.xinitrc
+echo "exec startlxde" > /home/"$USERNAME"/.xinitrc
 
 #Installing some apps
 pacman -S —noconfirm chromium
