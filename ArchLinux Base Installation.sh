@@ -12,8 +12,7 @@ DATA_PARTITION_NAME="Data"
 SECONDARY_VOLUME="/dev/[WHATEVER]"
 SECONDARY_DATA_PARTITION_NAME="SecondaryData"
 SECONDARY_DATA_PARTITION="/dev/[WHATEVER]"
-
-
+SECONDARY_VOLUME_PARTITION_MOUNT_POINT="/mnt/hdd"
 
 #Other variables
 HOSTNAME="SICARIO"
@@ -42,6 +41,8 @@ swapon "$SWAP_PARTITION"
 mount "$DATA_PARTITION" /mnt
 mkdir /mnt/boot
 mount "$BOOT_PARTITION" /mnt/boot
+mkdir "$SECONDARY_VOLUME_PARTITION_MOUNT_POINT"
+mount "$SECONDARY_DATA_PARTITION" "$SECONDARY_VOLUME_PARTITION_MOUNT_POINT"
 
 #Install base packages and generate fstab
 pacstrap /mnt base base-devel
