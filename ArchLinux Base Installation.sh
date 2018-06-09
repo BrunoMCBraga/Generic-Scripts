@@ -5,9 +5,14 @@ EFI_PARTITION_NAME="EFI"
 BOOT_PARTITION="/dev/nvme0n1p2"
 BOOT_PARTITION_NAME="Boot"
 SWAP_PARTITION="/dev/nvme0n1p3"
-SWAP_PARTITION="Swap"
+SWAP_PARTITION_NAME="Swap"
 DATA_PARTITION="/dev/nvme0n1p4"
 DATA_PARTITION_NAME="Data"
+
+SECONDARY_VOLUME="/dev/[WHATEVER]"
+SECONDARY_DATA_PARTITION_NAME="SecondaryData"
+SECONDARY_DATA_PARTITION="/dev/[WHATEVER]"
+
 
 
 #Other variables
@@ -22,13 +27,17 @@ loadkeys pt-latin9
 timedatectl set-ntp true
 
 #Partitioning volumes
-sgdisk -Z "$MAIN_VOLUME"
-sgdisk -og "$MAIN_VOLUME"
+sgdisk -Z -og "$MAIN_VOLUME"
 sgdisk -n 1::+512M -n 2::+200M -n 3::+8G -n 4::  -t 1:ef00 -t 2:8300 -t 3:8200  -t 4:8300 -c 1:"$EFI_PARTITION_NAME" -c 2:"$BOOT_PARTITION_NAME" -c 3:"SWAP_PARTITION_NAME" -c 4:"$DATA_PARTITION_NAME"
 mkfs.fat [-s1 -F32] "$EFI_PARTITION" 
 mkfs.ext4 "$BOOT_PARTITION" 
 mkswap "$SWAP_PARTITION"
 mkfs.ext4 "$DATA_PARTITION"
+
+sgdisk -Z -og "$SECONDARY_VOLUME"
+sgdisk -n 1:: -t 1:8300 -c 1:"$SECONDARY_DATA_PARTITION_NAME"
+mkfs.ext4 "$SECONDARY_DATA_PARTITION"
+
 swapon "$SWAP_PARTITION"
 mount "$DATA_PARTITION" /mnt
 mkdir /mnt/boot
