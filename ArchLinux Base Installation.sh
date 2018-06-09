@@ -52,14 +52,14 @@ sgdisk -Z -og "$MAIN_VOLUME"
 sgdisk -n 1::+512M -n 2::+200M -n 3::+8G -n 4::  -t 1:ef00 -t 2:8300 -t 3:8200  -t 4:8e00 -c 1:"$EFI_PARTITION_NAME" -c 2:"$BOOT_PARTITION_NAME" -c 3:"SWAP_PARTITION_NAME" -c 4:"$DATA_PARTITION_NAME"
 
 cryptsetup luksFormat --type luks2 "$DATA_PARTITION"
-cryptsetup open "$DATA_PARTITION" cryptlvm
-pvcreate /dev/mapper/cryptlvm
-vgcreate "$MAIN_VOLUME_GROUP_NAME" /dev/mapper/cryptlvm
+cryptsetup open "$DATA_PARTITION" "$DATA_PARTITION_NAME"
+pvcreate /dev/mapper/"$DATA_PARTITION_NAME"
+vgcreate "$MAIN_VOLUME_GROUP_NAME" /dev/mapper/"$DATA_PARTITION_NAME"
 
 lvcreate -L 512M "$MAIN_VOLUME_GROUP_NAME" -n "$EFI_PARTITION_NAME"
 lvcreate -L 200M "$MAIN_VOLUME_GROUP_NAME" -n "$BOOT_PARTITION_NAME"
 lvcreate -L 8G "$MAIN_VOLUME_GROUP_NAME" -n "$SWAP_PARTITION_NAME"
-lvcreate -l 100%FREE "$MAIN_VOLUME_GROUP_NAME" -n "$DATA_PARTITION"
+lvcreate -l 100%FREE "$MAIN_VOLUME_GROUP_NAME" -n "$DATA_PARTITION_NAME"
 
 mkfs.fat /dev/"$MAIN_VOLUME_GROUP_NAME"/"$EFI_PARTITION_NAME"
 mkfs.ext4 /dev/"$MAIN_VOLUME_GROUP_NAME"/"$BOOT_PARTITION_NAME"
@@ -74,6 +74,7 @@ cryptsetup open "$BOOT_PARTITION" "$BOOT_PARTITION_NAME"
 mkfs.ext4 /dev/mapper/"$BOOT_PARTITION_NAME"
 mkdir /mnt/boot
 mount /dev/mapper/"$BOOT_PARTITION_NAME" /mnt/boot
+
 
 #Install base packages and generate fstab
 pacstrap /mnt base base-devel
@@ -93,10 +94,21 @@ echo "::1 localhost >> /etc/hosts
 echo "127.0.1.1	$FQHN $HOSTNAME" >> /etc/hosts
 echo "root:$ROOT_PASSWORD" | chpasswd
 
+#mkinitcpio.conf config
+echo "HOOKS=(base udev autodetect keyboard keymap consolefont modconf block encrypt lvm2 filesystems fsck)" > /etc/mkinitcpio.conf
+mkinitcpio -p linux
+
 # Installing Bootloader
 pacman -S —noconfirm grub efibootmgr
 mkdir /boot/efi
 mount "$EFI_PARTITION" /boot/efi
-grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=arch_grub
+echo -e "GRUB_CMDLINE_LINUX=\"cryptdevice=/dev/"$MAIN_VOLUME_GROUP_NAME"/"$DATA_PARTITION":$DATA_PARTITION_NAME\"\nGRUB_ENABLE_CRYPTODISK=y" > /etc/default/grub
 grub-mkconfig -o /boot/grub/grub.cfg
-reboot
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=arch_grub --recheck
+
+#Cleanup
+exit
+umount -R /mnt/boot
+umount -R /mnt
+cryptsetup close "$DATA_PARTITION_NAME"
+systemctl reboot
