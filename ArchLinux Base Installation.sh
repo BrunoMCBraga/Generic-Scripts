@@ -8,11 +8,14 @@ SWAP_PARTITION="/dev/nvme0n1p3"
 SWAP_PARTITION_NAME="Swap"
 DATA_PARTITION="/dev/nvme0n1p4"
 DATA_PARTITION_NAME="Data"
+MAIN_VOLUME_GROUP_NAME="MainVolGroup"
 
 SECONDARY_VOLUME="/dev/[WHATEVER]"
 SECONDARY_DATA_PARTITION_NAME="SecondaryData"
 SECONDARY_DATA_PARTITION="/dev/[WHATEVER]"
 SECONDARY_VOLUME_PARTITION_MOUNT_POINT="/mnt/hdd"
+SECONDARY_VOLUME_GROUP_NAME="SecondaryVolGroup"
+
 
 #Other variables
 HOSTNAME="SICARIO"
@@ -25,24 +28,52 @@ ROOT_PASSWORD="toor"
 loadkeys pt-latin9
 timedatectl set-ntp true
 
-#Partitioning volumes
+#Partitioning volumes and partition mounting (use this if you don't need volume encryption)
+#sgdisk -Z -og "$MAIN_VOLUME"
+#sgdisk -n 1::+512M -n 2::+200M -n 3::+8G -n 4::  -t 1:ef00 -t 2:8300 -t 3:8200  -t 4:8300 -c 1:"$EFI_PARTITION_NAME" -c 2:"$BOOT_PARTITION_NAME" -c 3:"SWAP_PARTITION_NAME" -c 4:"$DATA_PARTITION_NAME"
+#mkfs.fat [-s1 -F32] "$EFI_PARTITION" 
+#mkfs.ext4 "$BOOT_PARTITION" 
+#mkswap "$SWAP_PARTITION"
+#mkfs.ext4 "$DATA_PARTITION"
+
+#sgdisk -Z -og "$SECONDARY_VOLUME"
+#sgdisk -n 1:: -t 1:8300 -c 1:"$SECONDARY_DATA_PARTITION_NAME"
+#mkfs.ext4 "$SECONDARY_DATA_PARTITION"
+
+#swapon "$SWAP_PARTITION"
+#mount "$DATA_PARTITION" /mnt
+#mkdir /mnt/boot
+#mount "$BOOT_PARTITION" /mnt/boot
+#mkdir "$SECONDARY_VOLUME_PARTITION_MOUNT_POINT"
+#mount "$SECONDARY_DATA_PARTITION" "$SECONDARY_VOLUME_PARTITION_MOUNT_POINT"
+
+#Partitioning volumes and partition mounting (LVM on LUKS)
 sgdisk -Z -og "$MAIN_VOLUME"
-sgdisk -n 1::+512M -n 2::+200M -n 3::+8G -n 4::  -t 1:ef00 -t 2:8300 -t 3:8200  -t 4:8300 -c 1:"$EFI_PARTITION_NAME" -c 2:"$BOOT_PARTITION_NAME" -c 3:"SWAP_PARTITION_NAME" -c 4:"$DATA_PARTITION_NAME"
-mkfs.fat [-s1 -F32] "$EFI_PARTITION" 
-mkfs.ext4 "$BOOT_PARTITION" 
-mkswap "$SWAP_PARTITION"
-mkfs.ext4 "$DATA_PARTITION"
+sgdisk -n 1::+512M -n 2::+200M -n 3::+8G -n 4::  -t 1:ef00 -t 2:8300 -t 3:8200  -t 4:8e00 -c 1:"$EFI_PARTITION_NAME" -c 2:"$BOOT_PARTITION_NAME" -c 3:"SWAP_PARTITION_NAME" -c 4:"$DATA_PARTITION_NAME"
 
-sgdisk -Z -og "$SECONDARY_VOLUME"
-sgdisk -n 1:: -t 1:8300 -c 1:"$SECONDARY_DATA_PARTITION_NAME"
-mkfs.ext4 "$SECONDARY_DATA_PARTITION"
+cryptsetup luksFormat --type luks2 "$DATA_PARTITION"
+cryptsetup open "$DATA_PARTITION" cryptlvm
+pvcreate /dev/mapper/cryptlvm
+vgcreate "$MAIN_VOLUME_GROUP_NAME" /dev/mapper/cryptlvm
 
-swapon "$SWAP_PARTITION"
-mount "$DATA_PARTITION" /mnt
+lvcreate -L 512M "$MAIN_VOLUME_GROUP_NAME" -n "$EFI_PARTITION_NAME"
+lvcreate -L 200M "$MAIN_VOLUME_GROUP_NAME" -n "$BOOT_PARTITION_NAME"
+lvcreate -L 8G "$MAIN_VOLUME_GROUP_NAME" -n "$SWAP_PARTITION_NAME"
+lvcreate -l 100%FREE "$MAIN_VOLUME_GROUP_NAME" -n "$DATA_PARTITION"
+
+mkfs.fat /dev/"$MAIN_VOLUME_GROUP_NAME"/"$EFI_PARTITION_NAME"
+mkfs.ext4 /dev/"$MAIN_VOLUME_GROUP_NAME"/"$BOOT_PARTITION_NAME"
+mkfs.ext4 /dev/"$MAIN_VOLUME_GROUP_NAME"/"$DATA_PARTITION"
+mkswap /dev/"$MAIN_VOLUME_GROUP_NAME"/"$SWAP_PARTITION_NAME"
+
+mount /dev/"$MAIN_VOLUME_GROUP_NAME"/"$DATA_PARTITION" /mnt
+swapon /dev/"$MAIN_VOLUME_GROUP_NAME"/"$SWAP_PARTITION_NAME"
+
+cryptsetup luksFormat "$BOOT_PARTITION"
+cryptsetup open "$BOOT_PARTITION" "$BOOT_PARTITION_NAME"
+mkfs.ext4 /dev/mapper/"$BOOT_PARTITION_NAME"
 mkdir /mnt/boot
-mount "$BOOT_PARTITION" /mnt/boot
-mkdir "$SECONDARY_VOLUME_PARTITION_MOUNT_POINT"
-mount "$SECONDARY_DATA_PARTITION" "$SECONDARY_VOLUME_PARTITION_MOUNT_POINT"
+mount /dev/mapper/"$BOOT_PARTITION_NAME" /mnt/boot
 
 #Install base packages and generate fstab
 pacstrap /mnt base base-devel
