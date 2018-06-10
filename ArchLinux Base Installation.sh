@@ -4,18 +4,24 @@ EFI_PARTITION="/dev/nvme0n1p1"
 EFI_PARTITION_NAME="EFI"
 BOOT_PARTITION="/dev/nvme0n1p2"
 BOOT_PARTITION_NAME="Boot"
-SWAP_PARTITION="/dev/nvme0n1p3"
-SWAP_PARTITION_NAME="Swap"
-DATA_PARTITION="/dev/nvme0n1p4"
-DATA_PARTITION_NAME="Data"
-MAIN_VOLUME_GROUP_NAME="MainVolGroup"
+LVM_PARTITION="/dev/nvme0n1p4"
+LVM_PARTITION_NAME="LVMSSD"
+LVM_DATA_PARTITION_NAME="LVMDataSSD"
+LVM_DATA_PARTITION_MOUNT_POINT="/mnt"
+LVM_SWAP_PARTITION_NAME="LVMSWAP"
+LVM_VOLUME_GROUP_NAME="MainVolGroup"
+
+LUKS_PASSPHRASE="toor"
 
 SECONDARY_VOLUME="/dev/[WHATEVER]"
-SECONDARY_DATA_PARTITION_NAME="SecondaryData"
-SECONDARY_DATA_PARTITION="/dev/[WHATEVER]"
-SECONDARY_VOLUME_PARTITION_MOUNT_POINT="/mnt/hdd"
+SECONDARY_LVM_PARTITION="/dev/[WHATEVER]"
+SECONDARY_LVM_PARTITION_NAME="LVMHDD"
+SECONDARY_LVM_DATA_PARTITION_NAME="LVMDataHDD"
+SECONDARY_LVM_DATA_PARTITION_MOUNT_POINT="/mnt/hdd"
 SECONDARY_VOLUME_GROUP_NAME="SecondaryVolGroup"
+SECONDARY_LVM_VOLUME_GROUP_NAME="SecondaryVolGroup"
 
+LUKS_KEY_FILE="/root/keyfile"
 
 #Other variables
 HOSTNAME="SICARIO"
@@ -28,53 +34,55 @@ ROOT_PASSWORD="toor"
 loadkeys pt-latin9
 timedatectl set-ntp true
 
-#Partitioning volumes and partition mounting (use this if you don't need volume encryption)
-#sgdisk -Z -og "$MAIN_VOLUME"
-#sgdisk -n 1::+512M -n 2::+200M -n 3::+8G -n 4::  -t 1:ef00 -t 2:8300 -t 3:8200  -t 4:8300 -c 1:"$EFI_PARTITION_NAME" -c 2:"$BOOT_PARTITION_NAME" -c 3:"SWAP_PARTITION_NAME" -c 4:"$DATA_PARTITION_NAME"
-#mkfs.fat [-s1 -F32] "$EFI_PARTITION" 
-#mkfs.ext4 "$BOOT_PARTITION" 
-#mkswap "$SWAP_PARTITION"
-#mkfs.ext4 "$DATA_PARTITION"
-
-#sgdisk -Z -og "$SECONDARY_VOLUME"
-#sgdisk -n 1:: -t 1:8300 -c 1:"$SECONDARY_DATA_PARTITION_NAME"
-#mkfs.ext4 "$SECONDARY_DATA_PARTITION"
-
-#swapon "$SWAP_PARTITION"
-#mount "$DATA_PARTITION" /mnt
-#mkdir /mnt/boot
-#mount "$BOOT_PARTITION" /mnt/boot
-#mkdir "$SECONDARY_VOLUME_PARTITION_MOUNT_POINT"
-#mount "$SECONDARY_DATA_PARTITION" "$SECONDARY_VOLUME_PARTITION_MOUNT_POINT"
-
-#Partitioning volumes and partition mounting (LVM on LUKS)
+#Partitioning volumes and partition mounting (LVM on LUKS) for main hard drive (e.g. ssd)
 sgdisk -Z -og "$MAIN_VOLUME"
-sgdisk -n 1::+512M -n 2::+200M -n 3::+8G -n 4::  -t 1:ef00 -t 2:8300 -t 3:8200  -t 4:8e00 -c 1:"$EFI_PARTITION_NAME" -c 2:"$BOOT_PARTITION_NAME" -c 3:"SWAP_PARTITION_NAME" -c 4:"$DATA_PARTITION_NAME"
+sgdisk -n 1::+512M -n 2::+200M -n 3::+8G -n 4::  -t 1:ef00 -t 2:8300 -t 3:8200  -t 4:8e00 -c 1:"$EFI_PARTITION_NAME" -c 2:"$BOOT_PARTITION_NAME" -c 3:"$LVM_PARTITION_NAME"
 
-cryptsetup luksFormat --type luks2 "$DATA_PARTITION"
-cryptsetup open "$DATA_PARTITION" "$DATA_PARTITION_NAME"
-pvcreate /dev/mapper/"$DATA_PARTITION_NAME"
-vgcreate "$MAIN_VOLUME_GROUP_NAME" /dev/mapper/"$DATA_PARTITION_NAME"
+cryptsetup luksFormat --type luks2 "$LVM_PARTITION" #Create the LUKS encrypted container. 
+echo "$LUKS_PASSPHRASE" | cryptsetup luksOpen "$LVM_PARTITION" "$LVM_PARTITION_NAME"  -d - #Open the container. The decrypted container is now available at /dev/mapper/$LVM_PARTITION_NAME
+pvcreate /dev/mapper/"$LVM_PARTITION_NAME" #Create a physical volume on top of the opened LUKS container
+vgcreate "$LVM_VOLUME_GROUP_NAME" /dev/mapper/"$LVM_PARTITION_NAME" #Create the volume group named X, adding the previously created physical volume to it
 
-lvcreate -L 512M "$MAIN_VOLUME_GROUP_NAME" -n "$EFI_PARTITION_NAME"
-lvcreate -L 200M "$MAIN_VOLUME_GROUP_NAME" -n "$BOOT_PARTITION_NAME"
-lvcreate -L 8G "$MAIN_VOLUME_GROUP_NAME" -n "$SWAP_PARTITION_NAME"
-lvcreate -l 100%FREE "$MAIN_VOLUME_GROUP_NAME" -n "$DATA_PARTITION_NAME"
+lvcreate -L 8G "$LVM_VOLUME_GROUP_NAME" -n "$LVM_SWAP_PARTITION_NAME"
+lvcreate -l 100%FREE "$LVM_VOLUME_GROUP_NAME" -n "$LVM_DATA_PARTITION_NAME"
 
-mkfs.fat /dev/"$MAIN_VOLUME_GROUP_NAME"/"$EFI_PARTITION_NAME"
-mkfs.ext4 /dev/"$MAIN_VOLUME_GROUP_NAME"/"$BOOT_PARTITION_NAME"
-mkfs.ext4 /dev/"$MAIN_VOLUME_GROUP_NAME"/"$DATA_PARTITION"
-mkswap /dev/"$MAIN_VOLUME_GROUP_NAME"/"$SWAP_PARTITION_NAME"
+# Formatting and mounting SWAP and data partitions
+mkfs.fat [-s1 -F32] "$EFI_PARTITION" 
+mkfs.ext4 /dev/"$LVM_VOLUME_GROUP_NAME"/"$LVM_DATA_PARTITION_NAME"
+mkswap /dev/"$LVM_VOLUME_GROUP_NAME"/"$LVM_SWAP_PARTITION_NAME"
 
-mount /dev/"$MAIN_VOLUME_GROUP_NAME"/"$DATA_PARTITION" /mnt
-swapon /dev/"$MAIN_VOLUME_GROUP_NAME"/"$SWAP_PARTITION_NAME"
+mount /dev/"$LVM_VOLUME_GROUP_NAME"/"$LVM_DATA_PARTITION_NAME" /mnt
+swapon /dev/"$LVM_VOLUME_GROUP_NAME"/"$LVM_SWAP_PARTITION_NAME"
 
-cryptsetup luksFormat "$BOOT_PARTITION"
-cryptsetup open "$BOOT_PARTITION" "$BOOT_PARTITION_NAME"
-mkfs.ext4 /dev/mapper/"$BOOT_PARTITION_NAME"
+# Formatting and mounting boot partition
+mkfs.ext4 "$BOOT_PARTITION" 
+
 mkdir /mnt/boot
-mount /dev/mapper/"$BOOT_PARTITION_NAME" /mnt/boot
+mount "$BOOT_PARTITION" /mnt/boot
 
+
+#Create key file for second volume
+dd if=/dev/urandom of="$LUKS_KEY_FILE" bs=1024 count=4
+chmod 0400 "$LUKS_KEY_FILE"
+
+#Partitioning volumes and partition mounting (LVM on LUKS) for main hard drive (e.g. hdd)
+sgdisk -Z -og "$SECONDARY_VOLUME"
+sgdisk -n 1:: -t 1:8e00 -c 1:"$SECONDARY_LVM_PARTITION_NAME"
+cryptsetup luksFormat --type luks2 "$SECONDARY_LVM_PARTITION"
+cryptsetup open "$SECONDARY_LVM_PARTITION" "$SECONDARY_LVM_PARTITION_NAME" -d "$LUKS_KEY_FILE"
+pvcreate /dev/mapper/"$SECONDARY_LVM_PARTITION_NAME" #Create a physical volume on top of the opened LUKS container
+vgcreate "$SECONDARY_LVM_VOLUME_GROUP_NAME" /dev/mapper/"$SECONDARY_LVM_PARTITION_NAME" #Create the volume group named X, adding the previously created physical volume to it
+
+lvcreate -l 100%FREE "$SECONDARY_LVM_VOLUME_GROUP_NAME" -n "$SECONDARY_LVM_DATA_PARTITION_NAME"
+
+# Formatting partitions
+mkfs.ext4 /dev/"$SECONDARY_LVM_VOLUME_GROUP_NAME"/"$SECONDARY_LVM_DATA_PARTITION_NAME"
+
+# Mounting secondary hard drive data
+mkdir "$SECONDARY_LVM_DATA_PARTITION_MOUNT_POINT"
+mount /dev/"$SECONDARY_LVM_VOLUME_GROUP_NAME"/"$SECONDARY_LVM_DATA_PARTITION_NAME" "$SECONDARY_LVM_DATA_PARTITION_MOUNT_POINT"
+
+echo "$SECONDARY_LVM_PARTITION_NAME $SECONDARY_LVM_PARTITION $LUKS_KEY_FILE luks" >> /etc/crypttab
 
 #Install base packages and generate fstab
 pacstrap /mnt base base-devel
@@ -90,7 +98,7 @@ echo "LANG=en_US.UTF-8" > /etc/locale.conf
 echo -e "KEYMAP=pt-latin9\nFONT=\nFONT_MAP=" > /etc/vconsole.conf
 echo "$HOSTNAME" > /etc/hostname
 echo "127.0.0.1	localhost" >> /etc/hosts
-echo "::1 localhost >> /etc/hosts
+echo "::1 localhost" >> /etc/hosts
 echo "127.0.1.1	$FQHN $HOSTNAME" >> /etc/hosts
 echo "root:$ROOT_PASSWORD" | chpasswd
 
@@ -98,11 +106,11 @@ echo "root:$ROOT_PASSWORD" | chpasswd
 echo "HOOKS=(base udev autodetect keyboard keymap consolefont modconf block encrypt lvm2 filesystems fsck)" > /etc/mkinitcpio.conf
 mkinitcpio -p linux
 
-# Installing Bootloader
+#Installing Bootloader
 pacman -S —noconfirm grub efibootmgr
 mkdir /boot/efi
 mount "$EFI_PARTITION" /boot/efi
-echo -e "GRUB_CMDLINE_LINUX=\"cryptdevice=/dev/"$MAIN_VOLUME_GROUP_NAME"/"$DATA_PARTITION":$DATA_PARTITION_NAME\"\nGRUB_ENABLE_CRYPTODISK=y" > /etc/default/grub
+echo -e "GRUB_CMDLINE_LINUX=\"cryptdevice=/dev/$LVM_VOLUME_GROUP_NAME/$LVM_PARTITION:$LVM_PARTITION_NAME root=/dev/mapper/$LVM_PARTITION_NAME\"\nGRUB_ENABLE_CRYPTODISK=y" > /etc/default/grub
 grub-mkconfig -o /boot/grub/grub.cfg
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=arch_grub --recheck
 
@@ -110,5 +118,6 @@ grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=arch_
 exit
 umount -R /mnt/boot
 umount -R /mnt
-cryptsetup close "$DATA_PARTITION_NAME"
+cryptsetup close "$LVM_PARTITION_NAME"
+cryptsetup close "$SECONDARY_LVM_PARTITION_NAME"
 systemctl reboot
