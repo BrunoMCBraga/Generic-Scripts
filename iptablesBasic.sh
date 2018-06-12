@@ -1,11 +1,11 @@
 # Set default chain policies 
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
-iptables -P OUTPUT ACCEPT
+iptables -P OUTPUT DROP
 
 ip6tables -P INPUT DROP
 ip6tables -P FORWARD DROP
-ip6tables -P OUTPUT ACCEPT
+ip6tables -P OUTPUT DROP
 
 # Delete rules, chains and zero counters
 iptables -Z
