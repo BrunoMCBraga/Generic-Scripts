@@ -37,6 +37,10 @@ ip6tables -A OUTPUT -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
    
 # Persisting and restarting
 service iptables save
+service iptables enable
 service iptables restart
 service ip6tables save
+service ip6tables enable
 service ip6tables restart
+
+
