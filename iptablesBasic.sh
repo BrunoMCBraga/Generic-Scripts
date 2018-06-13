@@ -36,10 +36,10 @@ ip6tables -A OUTPUT -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
 
    
 # Persisting and restarting
-systemctl save iptables.service
+iptables-save > /etc/sysconfig/iptables
 systemctl enable iptables.service
 systemctl restart iptables.service
 
-systemctl save ip6tables.service
+ip6tables-save > /etc/sysconfig/ip6tables
 systemctl enable ip6tables.service
 systemctl restart ip6tables.service
